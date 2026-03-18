@@ -599,6 +599,14 @@ async def async_setup_entry(
                 if wan_connection.get("cellular"):
                     entities += _create_typed_wan_sensors("cellular_", wan_connection, coordinator, device_info, wan_id)
 
+                # Add signal detail sensors if signal data was fetched
+                if wan_connection.get("signal"):
+                    entities += _create_typed_wan_sensors("signal_", wan_connection, coordinator, device_info, wan_id)
+
+                # Add allowance sensor if allowance data was fetched
+                if wan_connection.get("allowance"):
+                    entities += _create_typed_wan_sensors("allowance_", wan_connection, coordinator, device_info, wan_id)
+
                 # Handle uptime - if available in data
                 if "uptime" in wan_connection:
                     uptime_description = next(

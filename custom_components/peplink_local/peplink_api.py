@@ -908,7 +908,33 @@ class PeplinkAPI:
         except Exception as e:
             _LOGGER.error("Error retrieving location information: %s", e)
             return {"gps": False, "type": "Unknown", "location": {}}
-            
+
+    async def get_wan_signal(self, conn_id: int) -> Dict[str, Any]:
+        """Retrieve signal details for a specific WAN connection."""
+        try:
+            response = await self._make_api_request(
+                "status.wan.connection.signal", public_api=True, id=conn_id
+            )
+            if response.get("stat") == "ok" and "response" in response:
+                return response["response"]
+            return {}
+        except Exception as e:
+            _LOGGER.debug("Signal data not available for WAN %s: %s", conn_id, e)
+            return {}
+
+    async def get_wan_allowance(self, conn_id: int) -> Dict[str, Any]:
+        """Retrieve bandwidth allowance data for a specific WAN connection."""
+        try:
+            response = await self._make_api_request(
+                "status.wan.connection.allowance", public_api=True, id=conn_id
+            )
+            if response.get("stat") == "ok" and "response" in response:
+                return response["response"]
+            return {}
+        except Exception as e:
+            _LOGGER.debug("Allowance data not available for WAN %s: %s", conn_id, e)
+            return {}
+
     async def close(self) -> None:
         """Close the session if we created it."""
         if self._own_session and self._session is not None:
