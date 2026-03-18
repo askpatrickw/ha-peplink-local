@@ -282,6 +282,10 @@ class PeplinkAPI:
             if func.startswith('/'):
                 func = func[1:]
             endpoint = f"/api/{func}"
+            # Append any additional parameters as query string
+            if kwargs:
+                query_string = "&".join([f"{k}={v}" for k, v in kwargs.items()])
+                endpoint = f"{endpoint}?{query_string}"
         else:
             # Use "/cgi-bin/MANGA/api.cgi?func=..." style endpoint
             # Add timestamp to prevent caching
@@ -904,7 +908,24 @@ class PeplinkAPI:
         except Exception as e:
             _LOGGER.error("Error retrieving location information: %s", e)
             return {"gps": False, "type": "Unknown", "location": {}}
-            
+
+    async def get_wan_allowance(self) -> Dict[str, Any]:
+        """Retrieve bandwidth allowance data for all WAN connections.
+
+        Returns the response dict keyed by WAN ID. Each WAN may contain
+        per-SIM allowance data keyed by SIM number ("1", "2", etc.).
+        """
+        try:
+            response = await self._make_api_request(
+                "status.wan.connection.allowance", public_api=True
+            )
+            if response.get("stat") == "ok" and "response" in response:
+                return response["response"]
+            return {}
+        except Exception as e:
+            _LOGGER.debug("Allowance data not available: %s", e)
+            return {}
+
     async def close(self) -> None:
         """Close the session if we created it."""
         if self._own_session and self._session is not None:

@@ -34,10 +34,16 @@ except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "python-dotenv"])
     from dotenv import load_dotenv
 
-# Configure logging
+# Configure logging — write to both stdout and a log file (overwritten each run)
+_log_file = Path(__file__).parent / "output" / "api_test.log"
+_log_file.parent.mkdir(parents=True, exist_ok=True)
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler(_log_file, mode='w'),
+    ],
 )
 _LOGGER = logging.getLogger(__name__)
 
@@ -189,7 +195,49 @@ async def test_api(router_ip, username, password, verify_ssl=False):
             _LOGGER.error("Error during wan_status test: %s", e)
             test_results["wan_status"] = f"FAILED: {str(e)}"
             test_context = {"wan_interfaces": []}
-        
+
+        # 5a. Raw WAN status dump (captures cellular/wifi sub-objects not visible after processing)
+        _LOGGER.info("Fetching raw WAN status via direct API call...")
+        try:
+            wan_status_raw = await api._api_request("/api/status.wan.connection")
+            _LOGGER.info("Raw WAN status: %s", json.dumps(wan_status_raw, indent=2))
+
+            with open(output_dir / "wan_status_raw.json", "w") as f:
+                json.dump(wan_status_raw, f, indent=2)
+
+            test_results["wan_status_raw"] = "PASSED"
+        except Exception as e:
+            _LOGGER.error("Error during raw WAN status dump: %s", e)
+            test_results["wan_status_raw"] = f"FAILED: {str(e)}"
+
+        # 5b. Signal endpoint exploration (single call returns all WANs)
+        _LOGGER.info("Exploring signal endpoint...")
+        try:
+            signal_data = await api._api_request("/api/status.wan.connection.signal")
+            _LOGGER.info("Signal data: %s", json.dumps(signal_data, indent=2))
+
+            with open(output_dir / "wan_signal.json", "w") as f:
+                json.dump(signal_data, f, indent=2)
+
+            test_results["wan_signal"] = "PASSED"
+        except Exception as e:
+            _LOGGER.error("Error fetching signal data: %s", e)
+            test_results["wan_signal"] = f"FAILED: {str(e)}"
+
+        # 5c. Allowance endpoint exploration (single call returns all WANs)
+        _LOGGER.info("Exploring allowance endpoint...")
+        try:
+            allowance_data = await api._api_request("/api/status.wan.connection.allowance")
+            _LOGGER.info("Allowance data: %s", json.dumps(allowance_data, indent=2))
+
+            with open(output_dir / "wan_allowance.json", "w") as f:
+                json.dump(allowance_data, f, indent=2)
+
+            test_results["wan_allowance"] = "PASSED"
+        except Exception as e:
+            _LOGGER.error("Error fetching allowance data: %s", e)
+            test_results["wan_allowance"] = f"FAILED: {str(e)}"
+
         # 6. Client information
         _LOGGER.info("Fetching client information...")
         try:

@@ -20,3 +20,5 @@ jobs:
 
       - name: Hassfest validation
         uses: "home-assistant/actions/hassfest@1.0.0"
+        with:
+          path: "custom_components/peplink_local"

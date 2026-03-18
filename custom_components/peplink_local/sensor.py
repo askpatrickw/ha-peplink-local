@@ -65,6 +65,30 @@ uptime_to_stable_datetime = ignore_variance(
     datetime.timedelta(minutes=1),
 )
 
+
+def _get_primary_band_field(connection: dict, *keys: str):
+    """Extract a field from the primary band of a cellular connection.
+
+    The cellular.rat array contains radio access technologies (5G, LTE, etc.)
+    with nested bands. The first RAT's first band is the primary.
+    Supports paths like ("signal", "rsrp") or ("name",).
+    """
+    try:
+        rat = connection.get("cellular", {}).get("rat", [])
+        if not rat:
+            return None
+        bands = rat[0].get("band", [])
+        if not bands:
+            return None
+        result = bands[0]
+        for key in keys:
+            result = result.get(key)
+            if result is None:
+                return None
+        return result
+    except (IndexError, AttributeError, TypeError):
+        return None
+
 SENSOR_TYPES: tuple[PeplinkSensorEntityDescription, ...] = (
     # System sensors
     PeplinkSensorEntityDescription(
@@ -257,6 +281,152 @@ SENSOR_TYPES: tuple[PeplinkSensorEntityDescription, ...] = (
         icon="mdi:wifi-settings",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
+    # Cellular specific sensors
+    PeplinkSensorEntityDescription(
+        key="cellular_mobile_type",
+        translation_key=None,
+        name="Mobile Technology",
+        native_unit_of_measurement=None,
+        device_class=None,
+        state_class=None,
+        value_fn=lambda x: x.get("cellular", {}).get("mobileType"),
+        icon="mdi:cellphone-wireless",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    PeplinkSensorEntityDescription(
+        key="cellular_signal_level",
+        translation_key=None,
+        name="Signal Level",
+        native_unit_of_measurement=None,
+        device_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda x: x.get("cellular", {}).get("signalLevel"),
+        icon="mdi:signal-cellular-3",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    PeplinkSensorEntityDescription(
+        key="cellular_carrier",
+        translation_key=None,
+        name="Carrier",
+        native_unit_of_measurement=None,
+        device_class=None,
+        state_class=None,
+        value_fn=lambda x: x.get("cellular", {}).get("carrier", {}).get("name"),
+        icon="mdi:antenna",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    PeplinkSensorEntityDescription(
+        key="cellular_data_technology",
+        translation_key=None,
+        name="Data Technology",
+        native_unit_of_measurement=None,
+        device_class=None,
+        state_class=None,
+        value_fn=lambda x: x.get("cellular", {}).get("dataTechnology"),
+        icon="mdi:cellphone-wireless",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    PeplinkSensorEntityDescription(
+        key="cellular_band",
+        translation_key=None,
+        name="Band",
+        native_unit_of_measurement=None,
+        device_class=None,
+        state_class=None,
+        value_fn=lambda x: _get_primary_band_field(x, "name"),
+        icon="mdi:radio-tower",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    PeplinkSensorEntityDescription(
+        key="cellular_modem",
+        translation_key=None,
+        name="Modem",
+        native_unit_of_measurement=None,
+        device_class=None,
+        state_class=None,
+        value_fn=lambda x: x.get("cellular", {}).get("model"),
+        icon="mdi:chip",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    # Signal detail sensors — extracted from cellular.rat[0].band[0].signal (primary band)
+    PeplinkSensorEntityDescription(
+        key="cellular_rsrp",
+        translation_key=None,
+        name="RSRP",
+        native_unit_of_measurement="dBm",
+        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda x: _get_primary_band_field(x, "signal", "rsrp"),
+        icon="mdi:signal-variant",
+    ),
+    PeplinkSensorEntityDescription(
+        key="cellular_sinr",
+        translation_key=None,
+        name="SINR",
+        native_unit_of_measurement="dB",
+        device_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda x: _get_primary_band_field(x, "signal", "sinr"),
+        icon="mdi:signal-variant",
+    ),
+    PeplinkSensorEntityDescription(
+        key="cellular_rsrq",
+        translation_key=None,
+        name="RSRQ",
+        native_unit_of_measurement="dB",
+        device_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda x: _get_primary_band_field(x, "signal", "rsrq"),
+        icon="mdi:signal-variant",
+    ),
+    PeplinkSensorEntityDescription(
+        key="cellular_rssi",
+        translation_key=None,
+        name="RSSI",
+        native_unit_of_measurement="dBm",
+        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda x: _get_primary_band_field(x, "signal", "rssi"),
+        icon="mdi:signal-variant",
+    ),
+    # Bandwidth allowance sensors (per active SIM, from status.wan.connection.allowance)
+    PeplinkSensorEntityDescription(
+        key="allowance_usage",
+        translation_key=None,
+        name="Data Usage",
+        native_unit_of_measurement="MB",
+        device_class=SensorDeviceClass.DATA_SIZE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda x: x.get("allowance", {}).get("usage"),
+        icon="mdi:chart-donut",
+    ),
+    PeplinkSensorEntityDescription(
+        key="allowance_limit",
+        translation_key=None,
+        name="Data Limit",
+        native_unit_of_measurement="MB",
+        device_class=SensorDeviceClass.DATA_SIZE,
+        state_class=None,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda x: x.get("allowance", {}).get("limit"),
+        icon="mdi:chart-donut-variant",
+    ),
+    PeplinkSensorEntityDescription(
+        key="allowance_percent",
+        translation_key=None,
+        name="Data Usage Percent",
+        native_unit_of_measurement=PERCENTAGE,
+        device_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda x: x.get("allowance", {}).get("percent"),
+        icon="mdi:percent-circle",
+    ),
     # GPS Location sensors
     PeplinkSensorEntityDescription(
         key="heading",
@@ -289,6 +459,40 @@ SENSOR_TYPES: tuple[PeplinkSensorEntityDescription, ...] = (
         icon="mdi:arrow-up-bold",
     ),
 )
+
+
+def _create_typed_wan_sensors(
+    prefix: str,
+    wan_connection: dict,
+    coordinator: PeplinkDataUpdateCoordinator,
+    device_info: DeviceInfo,
+    wan_id: str,
+) -> list:
+    """Create WAN sensors for a given type prefix (e.g., 'wifi_', 'cellular_')."""
+    entities = []
+    for description in SENSOR_TYPES:
+        if description.key.startswith(prefix):
+            sensor_description = PeplinkSensorEntityDescription(
+                key=description.key[len(prefix):],
+                translation_key=description.translation_key,
+                name=description.name,
+                native_unit_of_measurement=description.native_unit_of_measurement,
+                device_class=description.device_class,
+                state_class=description.state_class,
+                icon=description.icon,
+                value_fn=description.value_fn,
+                entity_category=description.entity_category,
+            )
+            entities.append(
+                PeplinkWANSensor(
+                    coordinator=coordinator,
+                    description=sensor_description,
+                    sensor_data=wan_connection,
+                    device_info=device_info,
+                    wan_id=wan_id,
+                )
+            )
+    return entities
 
 
 async def async_setup_entry(
@@ -415,8 +619,9 @@ async def async_setup_entry(
                         native_unit_of_measurement=description.native_unit_of_measurement,
                         device_class=description.device_class,
                         state_class=description.state_class,
-                        icon=description.icon,  # Use the icon from the original description
+                        icon=description.icon,
                         value_fn=description.value_fn,
+                        entity_category=description.entity_category,
                     )
                     entities.append(
                         PeplinkWANSensor(
@@ -462,8 +667,9 @@ async def async_setup_entry(
                             native_unit_of_measurement=description.native_unit_of_measurement,
                             device_class=description.device_class,
                             state_class=description.state_class,
-                            icon=description.icon,  # Use the icon from the original description
+                            icon=description.icon,
                             value_fn=description.value_fn,
+                            entity_category=description.entity_category,
                         )
                         entities.append(
                             PeplinkWANSensor(
@@ -475,6 +681,18 @@ async def async_setup_entry(
                             )
                         )
                         
+                # Add WiFi sensors if this is a WiFi WAN
+                if wan_connection.get("wifi") or wan_connection.get("wireless"):
+                    entities += _create_typed_wan_sensors("wifi_", wan_connection, coordinator, device_info, wan_id)
+
+                # Add cellular sensors (includes signal detail) if this is a cellular WAN
+                if wan_connection.get("cellular"):
+                    entities += _create_typed_wan_sensors("cellular_", wan_connection, coordinator, device_info, wan_id)
+
+                # Add allowance sensor if allowance data was fetched
+                if wan_connection.get("allowance"):
+                    entities += _create_typed_wan_sensors("allowance_", wan_connection, coordinator, device_info, wan_id)
+
                 # Handle uptime - if available in data
                 if "uptime" in wan_connection:
                     uptime_description = next(
@@ -490,6 +708,7 @@ async def async_setup_entry(
                             state_class=uptime_description.state_class,
                             icon=uptime_description.icon,
                             value_fn=uptime_description.value_fn,
+                            entity_category=uptime_description.entity_category,
                         )
                         entities.append(
                             PeplinkWANSensor(

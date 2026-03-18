@@ -204,6 +204,22 @@ class PeplinkDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if not traffic_stats:
                 raise UpdateFailed("Failed to get traffic statistics")
                 
+            # Fetch allowance data (single call returns all WANs)
+            connections = wan_status.get("connection", [])
+            try:
+                allowance_data = await self.api.get_wan_allowance()
+                if allowance_data:
+                    for conn in connections:
+                        wan_id = str(conn.get("id", ""))
+                        wan_allowance = allowance_data.get(wan_id, {})
+                        # Find the active SIM's allowance (per-SIM keys are "1", "2", etc.)
+                        for sim_key, sim_data in wan_allowance.items():
+                            if isinstance(sim_data, dict) and sim_data.get("enable"):
+                                conn["allowance"] = sim_data
+                                break
+            except Exception:
+                pass  # Allowance data is optional
+
             # Update model and firmware information if available
             device_info_data = device_info.get("device_info", {})
             if device_info_data:
