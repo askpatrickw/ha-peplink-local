@@ -257,6 +257,86 @@ SENSOR_TYPES: tuple[PeplinkSensorEntityDescription, ...] = (
         icon="mdi:wifi-settings",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
+    # Cellular specific sensors
+    PeplinkSensorEntityDescription(
+        key="cellular_mobile_type",
+        translation_key=None,
+        name="Mobile Technology",
+        native_unit_of_measurement=None,
+        device_class=None,
+        state_class=None,
+        value_fn=lambda x: x.get("cellular", {}).get("mobileType"),
+        icon="mdi:cellphone-wireless",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    PeplinkSensorEntityDescription(
+        key="cellular_signal_level",
+        translation_key=None,
+        name="Signal Level",
+        native_unit_of_measurement=None,
+        device_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda x: x.get("cellular", {}).get("signalLevel"),
+        icon="mdi:signal-cellular-3",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    # Signal detail sensors (per-WAN, from status.wan.connection.signal)
+    PeplinkSensorEntityDescription(
+        key="signal_rssi",
+        translation_key=None,
+        name="RSSI",
+        native_unit_of_measurement="dBm",
+        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda x: x.get("signal", {}).get("rssi"),
+        icon="mdi:signal-variant",
+    ),
+    PeplinkSensorEntityDescription(
+        key="signal_sinr",
+        translation_key=None,
+        name="SINR",
+        native_unit_of_measurement="dB",
+        device_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda x: x.get("signal", {}).get("sinr"),
+        icon="mdi:signal-variant",
+    ),
+    PeplinkSensorEntityDescription(
+        key="signal_rsrp",
+        translation_key=None,
+        name="RSRP",
+        native_unit_of_measurement="dBm",
+        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda x: x.get("signal", {}).get("rsrp"),
+        icon="mdi:signal-variant",
+    ),
+    PeplinkSensorEntityDescription(
+        key="signal_rsrq",
+        translation_key=None,
+        name="RSRQ",
+        native_unit_of_measurement="dB",
+        device_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda x: x.get("signal", {}).get("rsrq"),
+        icon="mdi:signal-variant",
+    ),
+    # Bandwidth allowance sensor (per-WAN, from status.wan.connection.allowance)
+    PeplinkSensorEntityDescription(
+        key="allowance_usage",
+        translation_key=None,
+        name="Data Usage",
+        native_unit_of_measurement="MB",
+        device_class=SensorDeviceClass.DATA_SIZE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda x: x.get("allowance", {}).get("usage"),
+        icon="mdi:chart-donut",
+    ),
     # GPS Location sensors
     PeplinkSensorEntityDescription(
         key="heading",
@@ -511,6 +591,14 @@ async def async_setup_entry(
                             )
                         )
                         
+                # Add WiFi sensors if this is a WiFi WAN
+                if wan_connection.get("wifi") or wan_connection.get("wireless"):
+                    entities += _create_typed_wan_sensors("wifi_", wan_connection, coordinator, device_info, wan_id)
+
+                # Add cellular sensors if this is a cellular WAN
+                if wan_connection.get("cellular"):
+                    entities += _create_typed_wan_sensors("cellular_", wan_connection, coordinator, device_info, wan_id)
+
                 # Handle uptime - if available in data
                 if "uptime" in wan_connection:
                     uptime_description = next(
