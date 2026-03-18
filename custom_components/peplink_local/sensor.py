@@ -449,8 +449,9 @@ async def async_setup_entry(
                         native_unit_of_measurement=description.native_unit_of_measurement,
                         device_class=description.device_class,
                         state_class=description.state_class,
-                        icon=description.icon,  # Use the icon from the original description
+                        icon=description.icon,
                         value_fn=description.value_fn,
+                        entity_category=description.entity_category,
                     )
                     entities.append(
                         PeplinkWANSensor(
@@ -525,6 +526,7 @@ async def async_setup_entry(
                             state_class=uptime_description.state_class,
                             icon=uptime_description.icon,
                             value_fn=uptime_description.value_fn,
+                            entity_category=uptime_description.entity_category,
                         )
                         entities.append(
                             PeplinkWANSensor(
