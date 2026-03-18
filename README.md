@@ -1,3 +1,8 @@
+> **WARNING: This is NOT the official repository.**
+> This is a personal fork. The original project lives at
+> **[weirded/ha-peplink-local](https://github.com/weirded/ha-peplink-local)**.
+> Please report issues and submit pull requests there.
+
 # Home Assistant Peplink Local Integration
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
