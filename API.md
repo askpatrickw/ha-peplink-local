@@ -16,7 +16,9 @@ We will POST to the `/api/login` endpoint to authenticate, passing the username 
 
 ### Official API documentation
 
-Documentation: https://download.peplink.com/resources/Peplink-Router-API-Documentation-for-Firmware-8.1.1.pdf
+Full API reference (all available endpoints, not just those used by this integration): [docs/peplink-router-api-8.1.1.md](docs/peplink-router-api-8.1.1.md)
+
+Original PDF: https://download.peplink.com/resources/Peplink-Router-API-Documentation-for-Firmware-8.1.1.pdf
 
 #### APIs used by this integration
 
