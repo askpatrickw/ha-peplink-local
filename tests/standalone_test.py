@@ -210,54 +210,33 @@ async def test_api(router_ip, username, password, verify_ssl=False):
             _LOGGER.error("Error during raw WAN status dump: %s", e)
             test_results["wan_status_raw"] = f"FAILED: {str(e)}"
 
-        # 5b. Signal endpoint exploration (per-WAN)
-        wan_interfaces = test_context.get("wan_interfaces", [])
-        if wan_interfaces:
-            _LOGGER.info("Exploring signal endpoint for %d WAN(s)...", len(wan_interfaces))
-            for wan_id in wan_interfaces:
-                test_key = f"wan_signal_{wan_id}"
-                try:
-                    signal_data = await api._api_request(
-                        f"/api/status.wan.connection.signal?id={wan_id}"
-                    )
-                    _LOGGER.info(
-                        "Signal data for WAN %s: %s",
-                        wan_id, json.dumps(signal_data, indent=2)
-                    )
+        # 5b. Signal endpoint exploration (single call returns all WANs)
+        _LOGGER.info("Exploring signal endpoint...")
+        try:
+            signal_data = await api._api_request("/api/status.wan.connection.signal")
+            _LOGGER.info("Signal data: %s", json.dumps(signal_data, indent=2))
 
-                    with open(output_dir / f"wan_signal_{wan_id}.json", "w") as f:
-                        json.dump(signal_data, f, indent=2)
+            with open(output_dir / "wan_signal.json", "w") as f:
+                json.dump(signal_data, f, indent=2)
 
-                    test_results[test_key] = "PASSED"
-                except Exception as e:
-                    _LOGGER.error("Error fetching signal for WAN %s: %s", wan_id, e)
-                    test_results[test_key] = f"FAILED: {str(e)}"
-        else:
-            _LOGGER.warning("No WAN interfaces found — skipping signal endpoint exploration")
+            test_results["wan_signal"] = "PASSED"
+        except Exception as e:
+            _LOGGER.error("Error fetching signal data: %s", e)
+            test_results["wan_signal"] = f"FAILED: {str(e)}"
 
-        # 5c. Allowance endpoint exploration (per-WAN)
-        if wan_interfaces:
-            _LOGGER.info("Exploring allowance endpoint for %d WAN(s)...", len(wan_interfaces))
-            for wan_id in wan_interfaces:
-                test_key = f"wan_allowance_{wan_id}"
-                try:
-                    allowance_data = await api._api_request(
-                        f"/api/status.wan.connection.allowance?id={wan_id}"
-                    )
-                    _LOGGER.info(
-                        "Allowance data for WAN %s: %s",
-                        wan_id, json.dumps(allowance_data, indent=2)
-                    )
+        # 5c. Allowance endpoint exploration (single call returns all WANs)
+        _LOGGER.info("Exploring allowance endpoint...")
+        try:
+            allowance_data = await api._api_request("/api/status.wan.connection.allowance")
+            _LOGGER.info("Allowance data: %s", json.dumps(allowance_data, indent=2))
 
-                    with open(output_dir / f"wan_allowance_{wan_id}.json", "w") as f:
-                        json.dump(allowance_data, f, indent=2)
+            with open(output_dir / "wan_allowance.json", "w") as f:
+                json.dump(allowance_data, f, indent=2)
 
-                    test_results[test_key] = "PASSED"
-                except Exception as e:
-                    _LOGGER.error("Error fetching allowance for WAN %s: %s", wan_id, e)
-                    test_results[test_key] = f"FAILED: {str(e)}"
-        else:
-            _LOGGER.warning("No WAN interfaces found — skipping allowance endpoint exploration")
+            test_results["wan_allowance"] = "PASSED"
+        except Exception as e:
+            _LOGGER.error("Error fetching allowance data: %s", e)
+            test_results["wan_allowance"] = f"FAILED: {str(e)}"
 
         # 6. Client information
         _LOGGER.info("Fetching client information...")
