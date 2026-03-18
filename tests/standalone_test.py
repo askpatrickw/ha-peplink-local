@@ -34,10 +34,16 @@ except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "python-dotenv"])
     from dotenv import load_dotenv
 
-# Configure logging
+# Configure logging — write to both stdout and a log file (overwritten each run)
+_log_file = Path(__file__).parent / "output" / "api_test.log"
+_log_file.parent.mkdir(parents=True, exist_ok=True)
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler(_log_file, mode='w'),
+    ],
 )
 _LOGGER = logging.getLogger(__name__)
 
