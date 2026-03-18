@@ -291,6 +291,40 @@ SENSOR_TYPES: tuple[PeplinkSensorEntityDescription, ...] = (
 )
 
 
+def _create_typed_wan_sensors(
+    prefix: str,
+    wan_connection: dict,
+    coordinator: PeplinkDataUpdateCoordinator,
+    device_info: DeviceInfo,
+    wan_id: str,
+) -> list:
+    """Create WAN sensors for a given type prefix (e.g., 'wifi_', 'cellular_')."""
+    entities = []
+    for description in SENSOR_TYPES:
+        if description.key.startswith(prefix):
+            sensor_description = PeplinkSensorEntityDescription(
+                key=description.key[len(prefix):],
+                translation_key=description.translation_key,
+                name=description.name,
+                native_unit_of_measurement=description.native_unit_of_measurement,
+                device_class=description.device_class,
+                state_class=description.state_class,
+                icon=description.icon,
+                value_fn=description.value_fn,
+                entity_category=description.entity_category,
+            )
+            entities.append(
+                PeplinkWANSensor(
+                    coordinator=coordinator,
+                    description=sensor_description,
+                    sensor_data=wan_connection,
+                    device_info=device_info,
+                    wan_id=wan_id,
+                )
+            )
+    return entities
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -462,8 +496,9 @@ async def async_setup_entry(
                             native_unit_of_measurement=description.native_unit_of_measurement,
                             device_class=description.device_class,
                             state_class=description.state_class,
-                            icon=description.icon,  # Use the icon from the original description
+                            icon=description.icon,
                             value_fn=description.value_fn,
+                            entity_category=description.entity_category,
                         )
                         entities.append(
                             PeplinkWANSensor(

@@ -282,6 +282,10 @@ class PeplinkAPI:
             if func.startswith('/'):
                 func = func[1:]
             endpoint = f"/api/{func}"
+            # Append any additional parameters as query string
+            if kwargs:
+                query_string = "&".join([f"{k}={v}" for k, v in kwargs.items()])
+                endpoint = f"{endpoint}?{query_string}"
         else:
             # Use "/cgi-bin/MANGA/api.cgi?func=..." style endpoint
             # Add timestamp to prevent caching
