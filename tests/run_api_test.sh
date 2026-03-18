@@ -13,9 +13,17 @@ cd "$(dirname "$0")/.."
 # Make the test script executable
 chmod +x "./tests/standalone_test.py"
 
-# Install required dependencies
-echo "Installing required dependencies from requirements.txt"
-pip install -r requirements.txt
+# Set up virtual environment
+VENV_DIR=".venv"
+if [ ! -d "$VENV_DIR" ]; then
+    echo "Creating virtual environment..."
+    python3 -m venv "$VENV_DIR"
+fi
+
+# Activate and install dependencies
+source "$VENV_DIR/bin/activate"
+echo "Installing required dependencies..."
+pip install -q aiohttp python-dotenv
 
 # Check if .env file exists, if not, copy from example
 if [ ! -f ".env" ] && [ -f ".env.example" ]; then

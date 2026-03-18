@@ -909,30 +909,21 @@ class PeplinkAPI:
             _LOGGER.error("Error retrieving location information: %s", e)
             return {"gps": False, "type": "Unknown", "location": {}}
 
-    async def get_wan_signal(self, conn_id: int) -> Dict[str, Any]:
-        """Retrieve signal details for a specific WAN connection."""
-        try:
-            response = await self._make_api_request(
-                "status.wan.connection.signal", public_api=True, id=conn_id
-            )
-            if response.get("stat") == "ok" and "response" in response:
-                return response["response"]
-            return {}
-        except Exception as e:
-            _LOGGER.debug("Signal data not available for WAN %s: %s", conn_id, e)
-            return {}
+    async def get_wan_allowance(self) -> Dict[str, Any]:
+        """Retrieve bandwidth allowance data for all WAN connections.
 
-    async def get_wan_allowance(self, conn_id: int) -> Dict[str, Any]:
-        """Retrieve bandwidth allowance data for a specific WAN connection."""
+        Returns the response dict keyed by WAN ID. Each WAN may contain
+        per-SIM allowance data keyed by SIM number ("1", "2", etc.).
+        """
         try:
             response = await self._make_api_request(
-                "status.wan.connection.allowance", public_api=True, id=conn_id
+                "status.wan.connection.allowance", public_api=True
             )
             if response.get("stat") == "ok" and "response" in response:
                 return response["response"]
             return {}
         except Exception as e:
-            _LOGGER.debug("Allowance data not available for WAN %s: %s", conn_id, e)
+            _LOGGER.debug("Allowance data not available: %s", e)
             return {}
 
     async def close(self) -> None:

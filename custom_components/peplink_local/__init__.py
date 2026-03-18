@@ -204,41 +204,21 @@ class PeplinkDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if not traffic_stats:
                 raise UpdateFailed("Failed to get traffic statistics")
                 
-            # Fetch signal and allowance data per-WAN
+            # Fetch allowance data (single call returns all WANs)
             connections = wan_status.get("connection", [])
-            signal_tasks = []
-            allowance_tasks = []
-            signal_wan_indices = []
-            allowance_wan_indices = []
-
-            for i, conn in enumerate(connections):
-                if not conn.get("enable") or not conn.get("message", "").startswith("Connected"):
-                    continue
-                conn_id = conn.get("id")
-                if not conn_id:
-                    continue
-                # Signal for cellular/WiFi WANs
-                if "cellular" in conn or "wifi" in conn or "wireless" in conn:
-                    signal_tasks.append(self.api.get_wan_signal(int(conn_id)))
-                    signal_wan_indices.append(i)
-                # Allowance for WANs with monitoring enabled
-                bam = conn.get("bandwidthAllowanceMonitor", {})
-                if bam.get("enable"):
-                    allowance_tasks.append(self.api.get_wan_allowance(int(conn_id)))
-                    allowance_wan_indices.append(i)
-
-            # Fetch in parallel, don't fail on errors
-            if signal_tasks:
-                signal_results = await asyncio.gather(*signal_tasks, return_exceptions=True)
-                for idx, result in zip(signal_wan_indices, signal_results):
-                    if isinstance(result, dict) and result:
-                        connections[idx]["signal"] = result
-
-            if allowance_tasks:
-                allowance_results = await asyncio.gather(*allowance_tasks, return_exceptions=True)
-                for idx, result in zip(allowance_wan_indices, allowance_results):
-                    if isinstance(result, dict) and result:
-                        connections[idx]["allowance"] = result
+            try:
+                allowance_data = await self.api.get_wan_allowance()
+                if allowance_data:
+                    for conn in connections:
+                        wan_id = str(conn.get("id", ""))
+                        wan_allowance = allowance_data.get(wan_id, {})
+                        # Find the active SIM's allowance (per-SIM keys are "1", "2", etc.)
+                        for sim_key, sim_data in wan_allowance.items():
+                            if isinstance(sim_data, dict) and sim_data.get("enable"):
+                                conn["allowance"] = sim_data
+                                break
+            except Exception:
+                pass  # Allowance data is optional
 
             # Update model and firmware information if available
             device_info_data = device_info.get("device_info", {})
