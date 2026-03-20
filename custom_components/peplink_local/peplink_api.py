@@ -926,6 +926,42 @@ class PeplinkAPI:
             _LOGGER.debug("Allowance data not available: %s", e)
             return {}
 
+    async def reboot_router(self) -> None:
+        """Reboot the router."""
+        response = await self._make_api_request(
+            "cmd.system.reboot", public_api=True, method="POST"
+        )
+        if response.get("stat") != "ok":
+            raise Exception(
+                f"Reboot failed: {response.get('message', 'Unknown error')}"
+            )
+
+    async def reset_cellular_module(self, conn_id: str) -> None:
+        """Reset the cellular module for a specific WAN connection."""
+        response = await self._make_api_request(
+            "cmd.cellularModule.reset",
+            public_api=True,
+            method="POST",
+            data={"connId": conn_id},
+        )
+        if response.get("stat") != "ok":
+            raise Exception(
+                f"Cellular reset failed: {response.get('message', 'Unknown error')}"
+            )
+
+    async def rescan_cellular_network(self, conn_id: str) -> None:
+        """Rescan the cellular network for a specific WAN connection."""
+        response = await self._make_api_request(
+            "cmd.cellularModule.rescanNetwork",
+            public_api=True,
+            method="POST",
+            data={"connId": conn_id},
+        )
+        if response.get("stat") != "ok":
+            raise Exception(
+                f"Cellular rescan failed: {response.get('message', 'Unknown error')}"
+            )
+
     async def close(self) -> None:
         """Close the session if we created it."""
         if self._own_session and self._session is not None:
