@@ -942,7 +942,7 @@ class PeplinkAPI:
             "cmd.cellularModule.reset",
             public_api=True,
             method="POST",
-            data={"connId": conn_id},
+            data={"connId": int(conn_id)},
         )
         if response.get("stat") != "ok":
             raise Exception(
@@ -955,7 +955,7 @@ class PeplinkAPI:
             "cmd.cellularModule.rescanNetwork",
             public_api=True,
             method="POST",
-            data={"connId": conn_id},
+            data={"connId": int(conn_id)},
         )
         if response.get("stat") != "ok":
             raise Exception(
