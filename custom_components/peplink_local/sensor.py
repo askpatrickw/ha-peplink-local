@@ -61,8 +61,8 @@ class PeplinkBinarySensorEntityDescription(BinarySensorEntityDescription):
 
 
 uptime_to_stable_datetime = ignore_variance(
-    lambda value: dt_util.utcnow() - datetime.timedelta(seconds=value),
-    datetime.timedelta(minutes=1),
+    lambda value: dt_util.utcnow() - datetime.timedelta(seconds=(value // 60) * 60),
+    datetime.timedelta(minutes=2),
 )
 
 
