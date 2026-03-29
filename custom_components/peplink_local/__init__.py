@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -160,6 +160,7 @@ class PeplinkDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.serial_number = None  # Can be updated later if the API provides serial number
         self.product_code = None  # Can be updated later if the API provides product code
         self.hardware_revision = None  # Can be updated later if the API provides hardware revision
+        self.client_last_seen: dict[str, str] = {}  # MAC -> ISO 8601 timestamp
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Update data via API."""
@@ -236,6 +237,13 @@ class PeplinkDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if device_info_data.get("hardware_revision"):
                     self.hardware_revision = device_info_data.get("hardware_revision")
                 
+            # Update last_seen timestamps for active clients
+            now_iso = datetime.now(timezone.utc).isoformat()
+            for client in clients.get("client", []):
+                mac = client.get("mac", "").lower()
+                if mac and client.get("connected"):
+                    self.client_last_seen[mac] = now_iso
+
             # Combine all data into a single data structure
             return {
                 "wan_status": wan_status,
