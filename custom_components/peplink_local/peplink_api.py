@@ -425,7 +425,7 @@ class PeplinkAPI:
                  }
         """
         try:
-            response = await self._make_api_request("status.client", public_api=True)
+            response = await self._make_api_request("status.client", public_api=True, outputWeight="full")
             
             # Check for error response
             if "stat" in response and response["stat"] == "fail":
@@ -440,9 +440,9 @@ class PeplinkAPI:
                     if "list" in response["response"]:
                         clients = response["response"]["list"]
                         for client in clients:
-                            # Ensure each client has the required fields
-                            client["connected"] = True  # If it's in the list, it's connected
-                            client["mac"] = client.get("mac", "unknown")
+                            # Use the API's active field for connected state
+                            client["connected"] = client.get("active", False)
+                            client["mac"] = client.get("mac", "unknown").lower()
                             client["name"] = client.get("name", client.get("hostname", "Unknown Device"))
                         
                         _LOGGER.debug("Processed %d clients", len(clients))
