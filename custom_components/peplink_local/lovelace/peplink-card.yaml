@@ -1,0 +1,13 @@
+type: markdown
+title: Connected Clients
+content: >
+  {% set clients = state_attr('sensor.peplink_connected_clients', 'clients') %}
+  {% if clients and clients | length > 0 %}
+  | Name | IP | Connection | RSSI |
+  |------|-----|-----------|------|
+  {% for c in clients %}
+  | {{ c.name or 'Unknown' }} | {{ c.ip or '—' }} | {{ c.connection or '—' }} | {{ c.rssi if c.rssi is not none else '—' }} |
+  {% endfor %}
+  {% else %}
+  *No clients connected*
+  {% endif %}
