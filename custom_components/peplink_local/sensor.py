@@ -743,6 +743,14 @@ async def async_setup_entry(
     else:
         _LOGGER.debug("Router does not have GPS capability - skipping GPS sensors")
 
+    # Add connected clients sensor
+    entities.append(
+        PeplinkConnectedClientsSensor(
+            coordinator=coordinator,
+            config_entry_id=config_entry.entry_id,
+        )
+    )
+
     # Add all entities
     async_add_entities(entities)
 
@@ -958,6 +966,75 @@ class PeplinkWANSensor(CoordinatorEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return entity specific state attributes."""
         return self._extra_attrs
+
+
+class PeplinkConnectedClientsSensor(CoordinatorEntity, SensorEntity):
+    """Sensor reporting the live count and list of connected network clients."""
+
+    _attr_has_entity_name = True
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_icon = "mdi:devices"
+
+    def __init__(
+        self,
+        coordinator: PeplinkDataUpdateCoordinator,
+        config_entry_id: str,
+    ) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._config_entry_id = config_entry_id
+        self._attr_unique_id = f"{config_entry_id}_connected_clients"
+        self._attr_name = "Connected Clients"
+
+        device_name = coordinator.device_name or f"Peplink {coordinator.host}"
+        model_string = coordinator.model or "Router"
+        if coordinator.product_code and coordinator.hardware_revision:
+            model_string = f"{model_string} ({coordinator.product_code} HW {coordinator.hardware_revision})"
+        elif coordinator.product_code:
+            model_string = f"{model_string} ({coordinator.product_code})"
+        elif coordinator.hardware_revision:
+            model_string = f"{model_string} (HW {coordinator.hardware_revision})"
+
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, config_entry_id)},
+            manufacturer="Peplink",
+            model=model_string,
+            name=device_name,
+            sw_version=coordinator.firmware,
+        )
+
+    def _get_connected_clients(self) -> list[dict]:
+        """Return only clients with connected == True from coordinator data."""
+        all_clients = (
+            self.coordinator.data.get("clients", {}).get("client", [])
+            if self.coordinator.data
+            else []
+        )
+        return [c for c in all_clients if c.get("connected")]
+
+    @property
+    def native_value(self) -> int:
+        """Return the count of connected clients."""
+        return len(self._get_connected_clients())
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return per-client details as the 'clients' attribute."""
+        clients = []
+        for c in self._get_connected_clients():
+            conn_type = c.get("connectionType", "unknown")
+            if conn_type == "wireless":
+                connection = c.get("essid") or "wireless"
+            else:
+                connection = conn_type
+            clients.append({
+                "name": c.get("name"),
+                "ip": c.get("ip"),
+                "mac": c.get("mac"),
+                "connection": connection,
+                "rssi": c.get("rssi"),
+            })
+        return {"clients": clients}
 
 
 def _translate_wan_type(wan_type: str) -> str:
